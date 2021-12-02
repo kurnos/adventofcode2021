@@ -4,74 +4,107 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"strconv"
 )
 
-func day01a() (int, error) {
-	file, err := os.Open("data/day01.txt")
+func readints(fname string) (result []int) {
+	file, err := os.Open(fname)
 	if err != nil {
-		return 0, err
+		log.Fatal(err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	previous := math.MaxInt
-	growing_count := 0
 	for scanner.Scan() {
 		n, err := strconv.Atoi(scanner.Text())
 		if err != nil {
-			return 0, err
+			log.Fatal(err)
 		}
-		if n > previous {
-			growing_count += 1
-		}
-		previous = n
+		result = append(result, n)
 	}
 	if err := scanner.Err(); err != nil {
-		return 0, err
+		log.Fatal(err)
 	}
-
-	return growing_count, nil
+	return
 }
 
-func day01b() (int, error) {
-	file, err := os.Open("data/day01.txt")
+func readlines(fname string) (result []string) {
+	file, err := os.Open(fname)
 	if err != nil {
-		return 0, err
+		log.Fatal(err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	a, b, c, d := 0, 0, 0, 0
-	growing_count := 0
 	for scanner.Scan() {
-		n, err := strconv.Atoi(scanner.Text())
-		if err != nil {
-			return 0, err
-		}
-		a, b, c, d = b, c, d, n
-		if a != 0 && d != 0 && (a < d) {
-			growing_count += 1
-		}
+		result = append(result, scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		return 0, err
+		log.Fatal(err)
 	}
+	return
+}
 
-	return growing_count, nil
+func day01a() (result int) {
+	lines := readints("data/day01.txt")
+	for i := 0; i < len(lines)-1; i += 1 {
+		if lines[i] < lines[i+1] {
+			result += 1
+		}
+	}
+	return
+}
+
+func day01b() (result int) {
+	lines := readints("data/day01.txt")
+	for i := 0; i < len(lines)-3; i += 1 {
+		if lines[i] < lines[i+3] {
+			result += 1
+		}
+	}
+	return
+}
+
+func day02a() int {
+	x, y := 0, 0
+	for _, line := range readlines("data/day02.txt") {
+		up, down, forward := -1, -1, -1
+		if fmt.Sscanf(line, "up %d", &up); up >= 0 {
+			y -= up
+		} else if fmt.Sscanf(line, "down %d", &down); down >= 0 {
+			y += down
+		} else if fmt.Sscanf(line, "forward %d", &forward); forward >= 0 {
+			x += forward
+		} else {
+			log.Fatalf("can't match command %s", line)
+		}
+	}
+	return x * y
+}
+
+func day02b() int {
+	x, y, aim := 0, 0, 0
+	for _, line := range readlines("data/day02.txt") {
+		up, down, forward := -1, -1, -1
+		if fmt.Sscanf(line, "up %d", &up); up >= 0 {
+			aim -= up
+		} else if fmt.Sscanf(line, "down %d", &down); down >= 0 {
+			aim += down
+		} else if fmt.Sscanf(line, "forward %d", &forward); forward >= 0 {
+			x += forward
+			y += aim * forward
+
+		} else {
+			log.Fatalf("can't match command %s", line)
+		}
+	}
+	return x * y
 }
 
 func main() {
-	day01a, err := day01a()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("day01a:", day01a)
-	day01b, err := day01b()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("day01b:", day01b)
+	fmt.Println("day01a:", day01a())
+	fmt.Println("day01b:", day01b())
+	fmt.Println("day02a:", day02a())
+	fmt.Println("day02b:", day02b())
 }
