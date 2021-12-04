@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func readints_radix(fname string, radix int) (result []int) {
@@ -162,6 +163,103 @@ func day03b() uint64 {
 	return oxy * co2
 }
 
+func ParseDay4(lines []string) (numbers []int, boards [][5][5]int) {
+	for _, ns := range strings.Split(lines[0], ",") {
+		n, _ := strconv.Atoi(ns)
+		numbers = append(numbers, n)
+	}
+	for i := 2; i < len(lines); i += 6 {
+		var board [5][5]int
+		for j := 0; j < 5; j++ {
+			for c, ns := range strings.Fields(lines[i+j]) {
+				n, _ := strconv.Atoi(ns)
+				board[j][c] = n
+			}
+		}
+		boards = append(boards, board)
+	}
+	return
+}
+
+func day04a() int {
+	lines := readlines("data/day04.txt")
+
+	numbers, boards := ParseDay4(lines)
+
+	bingo := [5]int{-1, -1, -1, -1, -1}
+
+	for _, n := range numbers {
+		for a, b := range boards {
+			for x, r := range b {
+				for i, cell := range r {
+					if cell == n {
+						boards[a][x][i] = -1
+					}
+				}
+			}
+		}
+		for _, b := range boards {
+			for i := 0; i < 5; i += 1 {
+				if b[i] == bingo || [5]int{b[0][i], b[1][i], b[2][i], b[3][i], b[4][i]} == bingo {
+					sum := 0
+					for _, row := range b {
+						for _, cell := range row {
+							if cell != -1 {
+								sum += cell
+							}
+						}
+					}
+					return sum * n
+				}
+			}
+		}
+	}
+	return 0
+}
+
+func day04b() int {
+	lines := readlines("data/day04.txt")
+	numbers, boards := ParseDay4(lines)
+
+	marked := [5]int{-1, -1, -1, -1, -1}
+
+	completed := make(map[int]bool)
+
+	for _, n := range numbers {
+		for board_index, board := range boards {
+			for r, row := range board {
+				for c, cell := range row {
+					if cell == n {
+						boards[board_index][r][c] = -1
+					}
+				}
+			}
+		}
+		for board_index, b := range boards {
+			if completed[board_index] {
+				continue
+			}
+			for i := 0; i < 5; i += 1 {
+				if b[i] == marked || [5]int{b[0][i], b[1][i], b[2][i], b[3][i], b[4][i]} == marked {
+					completed[board_index] = true
+					if len(completed) == len(boards) {
+						sum := 0
+						for _, row := range b {
+							for _, cell := range row {
+								if cell != -1 {
+									sum += cell
+								}
+							}
+						}
+						return sum * n
+					}
+				}
+			}
+		}
+	}
+	return 0
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -169,4 +267,6 @@ func main() {
 	fmt.Println("day02b:", day02b())
 	fmt.Println("day03a:", day03a())
 	fmt.Println("day03b:", day03b())
+	fmt.Println("day04a:", day04a())
+	fmt.Println("day04b:", day04b())
 }
