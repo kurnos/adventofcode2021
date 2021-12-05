@@ -163,17 +163,17 @@ func day03b() uint64 {
 	return oxy * co2
 }
 
-func ParseDay4(lines []string) (numbers []int, boards [][5][5]int) {
+func ParseDay4(lines []string) (numbers []int, boards [][25]int) {
 	for _, ns := range strings.Split(lines[0], ",") {
 		n, _ := strconv.Atoi(ns)
 		numbers = append(numbers, n)
 	}
 	for i := 2; i < len(lines); i += 6 {
-		var board [5][5]int
+		var board [25]int
 		for j := 0; j < 5; j++ {
 			for c, ns := range strings.Fields(lines[i+j]) {
 				n, _ := strconv.Atoi(ns)
-				board[j][c] = n
+				board[5*j+c] = n
 			}
 		}
 		boards = append(boards, board)
@@ -181,36 +181,49 @@ func ParseDay4(lines []string) (numbers []int, boards [][5][5]int) {
 	return
 }
 
+func MarkNumberOnBoard(b *[25]int, n int) {
+	for i := range b {
+		if b[i] == n {
+			b[i] = -1
+		}
+	}
+}
+
+func CheckBingo(b *[25]int) bool {
+	for i := 0; i < 5; i++ {
+		row, col := -1, -1
+		for d := 0; d < 5; d++ {
+			row &= b[5*i+d]
+			col &= b[5*d+i]
+		}
+		if row < 0 || col < 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func BoardScore(b *[25]int, n int) (result int) {
+	for _, cell := range b {
+		if cell != -1 {
+			result += cell
+		}
+	}
+	result *= n
+	return
+}
+
 func day04a() int {
 	lines := readlines("data/day04.txt")
-
 	numbers, boards := ParseDay4(lines)
 
-	bingo := [5]int{-1, -1, -1, -1, -1}
-
 	for _, n := range numbers {
-		for a, b := range boards {
-			for x, r := range b {
-				for i, cell := range r {
-					if cell == n {
-						boards[a][x][i] = -1
-					}
-				}
-			}
+		for i := range boards {
+			MarkNumberOnBoard(&boards[i], n)
 		}
 		for _, b := range boards {
-			for i := 0; i < 5; i += 1 {
-				if b[i] == bingo || [5]int{b[0][i], b[1][i], b[2][i], b[3][i], b[4][i]} == bingo {
-					sum := 0
-					for _, row := range b {
-						for _, cell := range row {
-							if cell != -1 {
-								sum += cell
-							}
-						}
-					}
-					return sum * n
-				}
+			if CheckBingo(&b) {
+				return BoardScore(&b, n)
 			}
 		}
 	}
@@ -221,38 +234,17 @@ func day04b() int {
 	lines := readlines("data/day04.txt")
 	numbers, boards := ParseDay4(lines)
 
-	marked := [5]int{-1, -1, -1, -1, -1}
-
 	completed := make(map[int]bool)
 
 	for _, n := range numbers {
-		for board_index, board := range boards {
-			for r, row := range board {
-				for c, cell := range row {
-					if cell == n {
-						boards[board_index][r][c] = -1
-					}
-				}
-			}
+		for i := range boards {
+			MarkNumberOnBoard(&boards[i], n)
 		}
 		for board_index, b := range boards {
-			if completed[board_index] {
-				continue
-			}
-			for i := 0; i < 5; i += 1 {
-				if b[i] == marked || [5]int{b[0][i], b[1][i], b[2][i], b[3][i], b[4][i]} == marked {
-					completed[board_index] = true
-					if len(completed) == len(boards) {
-						sum := 0
-						for _, row := range b {
-							for _, cell := range row {
-								if cell != -1 {
-									sum += cell
-								}
-							}
-						}
-						return sum * n
-					}
+			if CheckBingo(&b) {
+				completed[board_index] = true
+				if len(completed) == len(boards) {
+					return BoardScore(&b, n)
 				}
 			}
 		}

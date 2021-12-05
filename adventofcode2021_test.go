@@ -1,6 +1,8 @@
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestDay01a(t *testing.T) {
 	got := day01a()
