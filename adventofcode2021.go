@@ -252,6 +252,68 @@ func day04b() int {
 	return 0
 }
 
+type Point struct {
+	x, y int
+}
+
+func ParseDay5(lines []string) (result [][2]Point) {
+	for _, line := range lines {
+		var p0, p1 Point
+		fmt.Sscanf(line, "%d,%d -> %d,%d", &p0.x, &p0.y, &p1.x, &p1.y)
+		result = append(result, [2]Point{p0, p1})
+	}
+	return
+}
+
+func signum(a int) int {
+	if a > 0 {
+		return 1
+	} else if a < 0 {
+		return -1
+	} else {
+		return 0
+	}
+}
+
+func MarkSegment(s [2]Point, vents map[Point]int) {
+	dx, dy := signum(s[1].x-s[0].x), signum(s[1].y-s[0].y)
+	for x, y := s[0].x, s[0].y; x != s[1].x || y != s[1].y; x, y = x+dx, y+dy {
+		vents[Point{x, y}] += 1
+	}
+	vents[s[1]] += 1
+}
+
+func ScoreVents(vents map[Point]int) (result int) {
+	for _, b := range vents {
+		if b > 1 {
+			result += 1
+		}
+	}
+	return
+}
+
+func day05a() int {
+	lines := readlines("data/day05.txt")
+	segments := ParseDay5(lines)
+	vents := make(map[Point]int)
+	for _, segment := range segments {
+		if segment[0].x == segment[1].x || segment[0].y == segment[1].y {
+			MarkSegment(segment, vents)
+		}
+	}
+	return ScoreVents(vents)
+}
+
+func day05b() int {
+	lines := readlines("data/day05.txt")
+	segments := ParseDay5(lines)
+	vents := make(map[Point]int)
+	for _, segment := range segments {
+		MarkSegment(segment, vents)
+	}
+	return ScoreVents(vents)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -261,4 +323,6 @@ func main() {
 	fmt.Println("day03b:", day03b())
 	fmt.Println("day04a:", day04a())
 	fmt.Println("day04b:", day04b())
+	fmt.Println("day05a:", day05a())
+	fmt.Println("day05b:", day05b())
 }
