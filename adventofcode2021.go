@@ -314,6 +314,52 @@ func day05b() int {
 	return ScoreVents(vents)
 }
 
+func ParseDay6(line []string) map[int]int {
+	result := make(map[int]int)
+	for _, ns := range strings.Split(line[0], ",") {
+		n, _ := strconv.Atoi(ns)
+		result[n] += 1
+	}
+	return result
+}
+
+func EvolveLanternfish(counts map[int]int) map[int]int {
+	new_counts := make(map[int]int)
+	for age, count := range counts {
+		if age > 0 {
+			new_counts[age-1] += count
+		} else {
+			new_counts[6] += count
+			new_counts[8] += count
+		}
+	}
+	counts = new_counts
+	return new_counts
+}
+
+func CountLanternfish(counts map[int]int) (result int) {
+	for _, count := range counts {
+		result += count
+	}
+	return
+}
+
+func day06a() int {
+	counts := ParseDay6(readlines("data/day06.txt"))
+	for i := 0; i < 80; i++ {
+		counts = EvolveLanternfish(counts)
+	}
+	return CountLanternfish(counts)
+}
+
+func day06b() int {
+	counts := ParseDay6(readlines("data/day06.txt"))
+	for i := 0; i < 256; i++ {
+		counts = EvolveLanternfish(counts)
+	}
+	return CountLanternfish(counts)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -325,4 +371,6 @@ func main() {
 	fmt.Println("day04b:", day04b())
 	fmt.Println("day05a:", day05a())
 	fmt.Println("day05b:", day05b())
+	fmt.Println("day06a:", day06a())
+	fmt.Println("day06b:", day06b())
 }
