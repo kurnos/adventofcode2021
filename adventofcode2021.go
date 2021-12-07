@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -360,6 +361,51 @@ func day06b() int {
 	return CountLanternfish(counts)
 }
 
+func Abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+func ParseDay7(fname string) (result []int) {
+	lines := readlines("data/day07.txt")
+	sum := 0
+	for _, ns := range strings.Split(lines[0], ",") {
+		n, _ := strconv.Atoi(ns)
+		result = append(result, n)
+		sum += n
+	}
+	return
+}
+
+func day07a() int {
+	positions := ParseDay7("data/day07.txt")
+	sort.Ints(positions)
+	median := positions[len(positions)/2]
+	diff := 0
+	for _, p := range positions {
+		diff += Abs(p - median)
+	}
+	return diff
+}
+
+func day07b() int {
+	positions := ParseDay7("data/day07.txt")
+	sum := 0
+	for _, p := range positions {
+		sum += p
+	}
+	mean := sum / len(positions)
+
+	cost := 0
+	for _, p := range positions {
+		d := Abs(p - mean)
+		cost += (d * (d + 1)) / 2
+	}
+	return cost
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -373,4 +419,6 @@ func main() {
 	fmt.Println("day05b:", day05b())
 	fmt.Println("day06a:", day06a())
 	fmt.Println("day06b:", day06b())
+	fmt.Println("day07a:", day07a())
+	fmt.Println("day07b:", day07b())
 }
