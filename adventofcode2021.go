@@ -406,6 +406,113 @@ func day07b() int {
 	return cost
 }
 
+func ParseDay8(fname string) (result [][2][]string) {
+	for _, line := range readlines(fname) {
+		var sample [2][]string
+		asdf := strings.Split(line, "|")
+		sample[0] = strings.Fields(strings.TrimSpace(asdf[0]))
+		sample[1] = strings.Fields(strings.TrimSpace(asdf[1]))
+		result = append(result, sample)
+	}
+	return
+}
+
+func day08a() int {
+	samples := ParseDay8("data/day08.txt")
+	count := 0
+	for _, ss := range samples {
+		for _, s := range ss[1] {
+			if x := len(s); x == 2 || x == 4 || x == 3 || x == 7 {
+				count += 1
+			}
+		}
+	}
+	return count
+}
+
+type RuneSlice []rune
+
+func (p RuneSlice) Len() int           { return len(p) }
+func (p RuneSlice) Less(i, j int) bool { return p[i] < p[j] }
+func (p RuneSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func Perm(a []rune, f func([]rune)) {
+	var perm func([]rune, func([]rune), int)
+	perm = func(a []rune, f func([]rune), i int) {
+		if i > len(a) {
+			f(a)
+			return
+		}
+		perm(a, f, i+1)
+		for j := i + 1; j < len(a); j++ {
+			a[i], a[j] = a[j], a[i]
+			perm(a, f, i+1)
+			a[i], a[j] = a[j], a[i]
+		}
+	}
+
+	perm(a, f, 0)
+}
+
+func Descramble(display string, key map[rune]rune) string {
+	unscrambled := make([]rune, 0, len(display))
+	for _, r := range display {
+		unscrambled = append(unscrambled, key[r])
+	}
+	sort.Sort(RuneSlice(unscrambled))
+	return string(unscrambled)
+}
+
+func day08b() int {
+	segment_to_digit := map[string]int{
+		"cf":      1,
+		"acf":     7,
+		"bcdf":    4,
+		"acdeg":   2,
+		"acdfg":   3,
+		"abdfg":   5,
+		"abcefg":  0,
+		"abdefg":  6,
+		"abcdfg":  9,
+		"abcdefg": 8,
+	}
+
+	samples := ParseDay8("data/day08.txt")
+	var all_keys []map[rune]rune
+	Perm([]rune("abcdefg"), func(p []rune) {
+		mapping := make(map[rune]rune)
+		for i, r := range p {
+			mapping[r] = []rune("abcdefgh")[i]
+		}
+		all_keys = append(all_keys, mapping)
+	})
+
+	sum := 0
+	for _, sample := range samples {
+		var correct_map map[rune]rune
+		for _, m := range all_keys {
+			matched := true
+			for _, p := range sample[0] {
+				if _, ok := segment_to_digit[Descramble(p, m)]; !ok {
+					matched = false
+					break
+				}
+			}
+			if matched {
+				correct_map = m
+				break
+			}
+		}
+		val := 0
+		for _, s := range sample[1] {
+			val = 10*val + segment_to_digit[Descramble(s, correct_map)]
+		}
+		sum += val
+	}
+
+	return sum
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -421,4 +528,6 @@ func main() {
 	fmt.Println("day06b:", day06b())
 	fmt.Println("day07a:", day07a())
 	fmt.Println("day07b:", day07b())
+	fmt.Println("day08a:", day08a())
+	fmt.Println("day08b:", day08b())
 }
