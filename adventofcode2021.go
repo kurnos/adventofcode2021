@@ -494,6 +494,81 @@ func day08b() int {
 	return sum
 }
 
+func ParseDay9(fname string) (result [][]int) {
+	for _, line := range readlines(fname) {
+		var asdf []int
+		for _, c := range line {
+			asdf = append(asdf, int(c)-int('0'))
+		}
+		result = append(result, asdf)
+	}
+	return
+}
+
+func Lowpoints(heights [][]int) (result []Point) {
+	dx, dy := len(heights[0]), len(heights)
+	for y := 0; y < dy; y++ {
+		for x := 0; x < dx; x++ {
+			me := heights[y][x]
+			if (x <= 0 || me < heights[y][x-1]) && (x == dx-1 || me < heights[y][x+1]) && (y == 0 || me < heights[y-1][x]) && (y == dy-1 || me < heights[y+1][x]) {
+				result = append(result, Point{x, y})
+			}
+		}
+	}
+	return
+}
+
+func Floodfill(heights [][]int, start Point) map[Point]bool {
+	dx, dy := len(heights[0]), len(heights)
+
+	seen := make(map[Point]bool)
+	for frontier := []Point{start}; len(frontier) > 0; {
+		p := frontier[len(frontier)-1]
+		frontier = frontier[:len(frontier)-1]
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = true
+		x, y := p.x, p.y
+		if x > 0 && heights[y][x-1] != 9 {
+			frontier = append(frontier, Point{x - 1, y})
+		}
+		if x < dx-1 && heights[y][x+1] != 9 {
+			frontier = append(frontier, Point{x + 1, y})
+		}
+		if y > 0 && heights[y-1][x] != 9 {
+			frontier = append(frontier, Point{x, y - 1})
+		}
+		if y < dy-1 && heights[y+1][x] != 9 {
+			frontier = append(frontier, Point{x, y + 1})
+		}
+	}
+	return seen
+}
+
+func day09a() int {
+	heights := ParseDay9("data/day09.txt")
+	result := 0
+	for _, p := range Lowpoints(heights) {
+		result += heights[p.y][p.x] + 1
+	}
+	return result
+}
+
+func day09b() int {
+	heights := ParseDay9("data/day09.txt")
+	var basin_sizes []int
+	for _, p := range Lowpoints(heights) {
+		basin_sizes = append(basin_sizes, len(Floodfill(heights, p)))
+	}
+	sort.Ints(basin_sizes)
+	result := 1
+	for _, p := range basin_sizes[len(basin_sizes)-3:] {
+		result *= p
+	}
+	return result
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -511,4 +586,6 @@ func main() {
 	fmt.Println("day07b:", day07b())
 	fmt.Println("day08a:", day08a())
 	fmt.Println("day08b:", day08b())
+	fmt.Println("day09a:", day09a())
+	fmt.Println("day09b:", day09b())
 }
