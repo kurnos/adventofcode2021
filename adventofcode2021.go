@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math"
 	"math/bits"
 	"os"
 	"sort"
@@ -614,11 +615,11 @@ func day10b() int {
 	return scores[len(scores)/2]
 }
 
-func ParseDay11(fname string) (result [10][10]byte) {
+func ParseDay11(fname string) (result [10][10]int8) {
 	lines := readlines(fname)
 	for y := 0; y < 10; y++ {
 		for x := 0; x < 10; x++ {
-			result[y][x] = lines[y][x] - '0'
+			result[y][x] = int8(lines[y][x] - '0')
 		}
 	}
 	return
@@ -634,16 +635,20 @@ func VisitNeighbours(p Point, d int, visitor func(Point)) {
 	}
 }
 
-func OctoStep(octopi *[10][10]byte) int {
-	blinked := make(map[Point]bool)
+func OctoStep(octopi *[10][10]int8) int {
+	blinked := 0
 	var pending []Point
 
 	for y := 0; y < 10; y++ {
 		for x := 0; x < 10; x++ {
-			octopi[y][x] += 1
-			if octopi[y][x] > 9 {
-				blinked[Point{x, y}] = true
+			if octopi[y][x] <= 0 {
+				octopi[y][x] = 1
+			} else if octopi[y][x] < 9 {
+				octopi[y][x] += 1
+			} else {
+				blinked += 1
 				pending = append(pending, Point{x, y})
+				octopi[y][x] = math.MinInt8
 			}
 		}
 	}
@@ -652,17 +657,15 @@ func OctoStep(octopi *[10][10]byte) int {
 		b, pending = pending[len(pending)-1], pending[:len(pending)-1]
 		VisitNeighbours(b, 10, func(p Point) {
 			octopi[p.y][p.x] += 1
-			if octopi[p.y][p.x] > 9 && !blinked[p] {
-				blinked[p] = true
+			if octopi[p.y][p.x] > 9 {
+				blinked += 1
 				pending = append(pending, p)
+				octopi[p.y][p.x] = math.MinInt8
 			}
 		})
 	}
-	for b = range blinked {
-		octopi[b.y][b.x] = 0
-	}
 
-	return len(blinked)
+	return blinked
 }
 
 func day11a() int {
