@@ -614,6 +614,73 @@ func day10b() int {
 	return scores[len(scores)/2]
 }
 
+func ParseDay11(fname string) (result [10][10]byte) {
+	lines := readlines(fname)
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			result[y][x] = lines[y][x] - '0'
+		}
+	}
+	return
+}
+
+func VisitNeighbours(p Point, d int, visitor func(Point)) {
+	for y := p.y - 1; y <= p.y+1; y += 1 {
+		for x := p.x - 1; x <= p.x+1; x += 1 {
+			if x >= 0 && y >= 0 && x < d && y < d && (x != p.x || y != p.y) {
+				visitor(Point{x, y})
+			}
+		}
+	}
+}
+
+func OctoStep(octopi *[10][10]byte) int {
+	blinked := make(map[Point]bool)
+	var pending []Point
+
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			octopi[y][x] += 1
+			if octopi[y][x] > 9 {
+				blinked[Point{x, y}] = true
+				pending = append(pending, Point{x, y})
+			}
+		}
+	}
+	var b Point
+	for len(pending) > 0 {
+		b, pending = pending[len(pending)-1], pending[:len(pending)-1]
+		VisitNeighbours(b, 10, func(p Point) {
+			octopi[p.y][p.x] += 1
+			if octopi[p.y][p.x] > 9 && !blinked[p] {
+				blinked[p] = true
+				pending = append(pending, p)
+			}
+		})
+	}
+	for b = range blinked {
+		octopi[b.y][b.x] = 0
+	}
+
+	return len(blinked)
+}
+
+func day11a() int {
+	octopi := ParseDay11("data/day11.txt")
+	blinks := 0
+	for i := 0; i < 100; i++ {
+		blinks += OctoStep(&octopi)
+	}
+	return blinks
+}
+func day11b() int {
+	octopi := ParseDay11("data/day11.txt")
+	t := 1
+	for ; OctoStep(&octopi) != 100; t++ {
+	}
+	return t
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -635,4 +702,6 @@ func main() {
 	fmt.Println("day09b:", day09b())
 	fmt.Println("day10a:", day10a())
 	fmt.Println("day10b:", day10b())
+	fmt.Println("day11a:", day11a())
+	fmt.Println("day11b:", day11b())
 }
