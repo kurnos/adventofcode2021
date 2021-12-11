@@ -569,6 +569,51 @@ func day09b() int {
 	return result
 }
 
+func MatchParens(x string) (rune, []rune) {
+	a := map[rune]rune{'(': ')', '[': ']', '{': '}', '<': '>'}
+	var stack []rune
+	for _, c := range x {
+		if _, ok := a[c]; ok {
+			stack = append(stack, c)
+		} else {
+			if a[stack[len(stack)-1]] == c {
+				stack = stack[:len(stack)-1]
+			} else {
+				return c, nil
+			}
+		}
+	}
+	return 'k', stack
+}
+
+func day10a() int {
+	heights := readlines("data/day10.txt")
+	scores := map[rune]int{')': 3, ']': 57, '}': 1197, '>': 25137, 'k': 0}
+	sum := 0
+	for _, line := range heights {
+		c, _ := MatchParens(line)
+		sum += scores[c]
+	}
+	return sum
+}
+
+func day10b() int {
+	heights := readlines("data/day10.txt")
+	scoring := map[rune]int{'(': 1, '[': 2, '{': 3, '<': 4}
+	var scores []int
+	for _, line := range heights {
+		if c, s := MatchParens(line); c == 'k' {
+			score := 0
+			for i := len(s) - 1; i >= 0; i-- {
+				score = score*5 + scoring[s[i]]
+			}
+			scores = append(scores, score)
+		}
+	}
+	sort.Ints(scores)
+	return scores[len(scores)/2]
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -588,4 +633,6 @@ func main() {
 	fmt.Println("day08b:", day08b())
 	fmt.Println("day09a:", day09a())
 	fmt.Println("day09b:", day09b())
+	fmt.Println("day10a:", day10a())
+	fmt.Println("day10b:", day10b())
 }

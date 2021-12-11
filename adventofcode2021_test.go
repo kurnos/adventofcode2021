@@ -129,3 +129,17 @@ func TestDay09b(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestDay10a(t *testing.T) {
+	got := day10a()
+	if got != 394647 {
+		t.Fail()
+	}
+}
+
+func TestDay10b(t *testing.T) {
+	got := day10b()
+	if got != 2380061249 {
+		t.Fail()
+	}
+}
