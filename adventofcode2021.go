@@ -684,6 +684,81 @@ func day11b() int {
 	return t
 }
 
+func ParseDay12(fname string) map[int][]int {
+	room_map := map[string]int{"start": 0, "end": 1}
+	smalls, bigs := 1, 0
+
+	map_rooms := func(s string) int {
+		if mapping, ok := room_map[s]; ok {
+			return mapping
+		} else if strings.ToLower(s) == s {
+			smalls++
+			room_map[s] = smalls
+			return smalls
+		} else {
+			bigs--
+			room_map[s] = bigs
+			return bigs
+		}
+	}
+
+	result := make(map[int][]int)
+	for _, line := range readlines(fname) {
+		asdf := strings.Split(line, "-")
+		a, b := map_rooms(asdf[0]), map_rooms(asdf[1])
+
+		result[a] = append(result[a], b)
+		result[b] = append(result[b], a)
+	}
+	return result
+}
+
+func day12a() int {
+	edges := ParseDay12("data/day12.txt")
+
+	var pathCount func(int, uint16) int
+	pathCount = func(current int, visited uint16) (result int) {
+		if current == 1 {
+			return 1
+		}
+
+		for _, next := range edges[current] {
+			if next < 0 {
+				result += pathCount(next, visited)
+			} else if visited&(1<<next) == 0 {
+				result += pathCount(next, visited|(1<<next))
+			}
+		}
+		return
+	}
+
+	return pathCount(0, 1)
+}
+
+func day12b() int {
+	edges := ParseDay12("data/day12.txt")
+
+	var pathCount func(int, uint16) int
+	pathCount = func(current int, visited uint16) (result int) {
+		if current == 1 {
+			return 1
+		}
+
+		for _, next := range edges[current] {
+			if next < 0 {
+				result += pathCount(next, visited)
+			} else if visited&(1<<next) == 0 {
+				result += pathCount(next, visited|(1<<next))
+			} else if next != 0 && visited&(1<<15) == 0 {
+				result += pathCount(next, visited|(1<<15))
+			}
+		}
+		return
+	}
+
+	return pathCount(0, 1)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -707,4 +782,6 @@ func main() {
 	fmt.Println("day10b:", day10b())
 	fmt.Println("day11a:", day11a())
 	fmt.Println("day11b:", day11b())
+	fmt.Println("day12a:", day12a())
+	fmt.Println("day12b:", day12b())
 }
