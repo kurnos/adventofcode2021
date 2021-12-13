@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"math"
@@ -759,6 +760,76 @@ func day12b() int {
 	return pathCount(0, 1)
 }
 
+func ParseDay13(fname string) (points map[Point]bool, folds []int) {
+	points = make(map[Point]bool)
+
+	for _, line := range readlines(fname) {
+		if strings.HasPrefix(line, "fold along ") {
+			n, _ := strconv.Atoi(line[13:])
+			if strings.Contains(line, "x") {
+				folds = append(folds, -n)
+			} else {
+				folds = append(folds, n)
+			}
+		} else if len(line) > 0 {
+			coords := strings.SplitN(line, ",", 2)
+			x, _ := strconv.Atoi(coords[0])
+			y, _ := strconv.Atoi(coords[1])
+			points[Point{x, y}] = true
+		}
+	}
+	return
+}
+
+func FoldPoints(points map[Point]bool, foldpoint int) map[Point]bool {
+	result := make(map[Point]bool)
+	i, f := (signum(foldpoint)+1)/2, Abs(foldpoint)
+	for p := range points {
+		x := [2]int{p.x, p.y}
+		if x[i] > f {
+			x[i] = 2*f - x[i]
+		}
+		result[Point{x[0], x[1]}] = true
+	}
+	return result
+}
+
+func ShowOrigami(points map[Point]bool) string {
+	max_x, max_y := math.MinInt, math.MinInt
+	for p := range points {
+		if p.x > max_x {
+			max_x = p.x
+		}
+		if p.y > max_y {
+			max_y = p.y
+		}
+	}
+	var buf bytes.Buffer
+	for y := 0; y <= max_y; y++ {
+		for x := 0; x <= max_x; x++ {
+			if points[Point{x, y}] {
+				fmt.Fprint(&buf, "#")
+			} else {
+				fmt.Fprint(&buf, ".")
+			}
+		}
+		fmt.Fprintln(&buf)
+	}
+	return buf.String()
+}
+
+func day13a() int {
+	points, folds := ParseDay13("data/day13.txt")
+	return len(FoldPoints(points, folds[0]))
+}
+func day13b() string {
+	points, folds := ParseDay13("data/day13.txt")
+	for _, f := range folds {
+		points = FoldPoints(points, f)
+	}
+	return ShowOrigami(points)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -784,4 +855,6 @@ func main() {
 	fmt.Println("day11b:", day11b())
 	fmt.Println("day12a:", day12a())
 	fmt.Println("day12b:", day12b())
+	fmt.Println("day13a:", day13a())
+	fmt.Println("day13b:", day13b())
 }
