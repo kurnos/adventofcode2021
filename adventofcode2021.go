@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"container/heap"
 	"fmt"
 	"log"
 	"math"
@@ -895,6 +896,115 @@ func day14b() int {
 	return minmaxdiff(a)
 }
 
+func ParseDay15(fname string) (result [][]int) {
+	for _, line := range readlines(fname) {
+		var xs []int
+		for _, x := range line {
+			xs = append(xs, int(x-'0'))
+		}
+		result = append(result, xs)
+	}
+	return
+}
+
+type Vertex struct {
+	pos         Point
+	cost, index int
+}
+
+type PriorityQueue []*Vertex
+
+func (pq PriorityQueue) Len() int           { return len(pq) }
+func (pq PriorityQueue) Less(i, j int) bool { return pq[i].cost < pq[j].cost }
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	item.index = -1
+	*pq = old[0 : n-1]
+	return item
+}
+func (pq *PriorityQueue) Push(x interface{}) {
+	n := len(*pq)
+	item := x.(*Vertex)
+	item.index = n
+	*pq = append(*pq, item)
+}
+func (pq *PriorityQueue) Update(vertex *Vertex, cost int) {
+	vertex.cost = cost
+	heap.Fix(pq, vertex.index)
+}
+
+func ShortestPath(grid [][]int, start, goal Point) int {
+	var verticies [][](*Vertex)
+	var queue PriorityQueue
+	for y, line := range grid {
+		var vs [](*Vertex)
+		for x := range line {
+			vs = append(vs, &Vertex{Point{x, y}, math.MaxInt, -1})
+			queue.Push(vs[len(vs)-1])
+		}
+		verticies = append(verticies, vs)
+	}
+
+	heap.Init(&queue)
+	queue.Update(verticies[0][0], 0)
+
+	for {
+		v := heap.Pop(&queue).(*Vertex)
+		if v.pos == goal {
+			return v.cost
+		}
+		p := v.pos
+		neighbours := []Point{
+			{p.x, p.y + 1},
+			{p.x, p.y - 1},
+			{p.x + 1, p.y},
+			{p.x - 1, p.y},
+		}
+		for _, t := range neighbours {
+			if t.y >= 0 && t.y < len(grid) && t.x >= 0 && t.x < len(grid[0]) {
+				cost := v.cost + grid[t.y][t.x]
+				if verticies[t.y][t.x].index != -1 && cost < verticies[t.y][t.x].cost {
+					queue.Update(verticies[t.y][t.x], cost)
+				}
+			}
+		}
+	}
+}
+
+func MultiGrid(grid [][]int) (result [][]int) {
+	for my := 0; my < 5; my++ {
+		for _, line := range grid {
+			var cs []int
+			for mx := 0; mx < 5; mx++ {
+				for _, c := range line {
+					c += mx + my
+					cs = append(cs, ((c-1)%9)+1)
+				}
+			}
+			result = append(result, cs)
+		}
+	}
+	return
+}
+
+func day15a() int {
+	grid := ParseDay15("data/day15.txt")
+	return ShortestPath(grid, Point{0, 0}, Point{len(grid) - 1, len(grid[0]) - 1})
+}
+
+func day15b() int {
+	grid := MultiGrid(ParseDay15("data/day15.txt"))
+	return ShortestPath(grid, Point{0, 0}, Point{len(grid) - 1, len(grid[0]) - 1})
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -924,4 +1034,6 @@ func main() {
 	fmt.Println("day13b:", day13b())
 	fmt.Println("day14a:", day14a())
 	fmt.Println("day14b:", day14b())
+	fmt.Println("day15a:", day15a())
+	fmt.Println("day15b:", day15b())
 }
