@@ -830,6 +830,71 @@ func day13b() string {
 	return ShowOrigami(points)
 }
 
+func ParseDay14(fname string) (map[byte]int, map[[2]byte]int, map[[2]byte]byte) {
+	lines := readlines(fname)
+	template := lines[0]
+	mappings := lines[2:]
+
+	state := make(map[[2]byte]int)
+	for i := 0; i < len(template)-1; i++ {
+		state[[2]byte{template[i], template[i+1]}] += 1
+	}
+	counts := make(map[byte]int)
+	for i := 0; i < len(template); i++ {
+		counts[template[i]] += 1
+	}
+	transformations := make(map[[2]byte]byte)
+	for _, t := range mappings {
+		x := strings.SplitN(t, " -> ", 2)
+		transformations[[2]byte{x[0][0], x[0][1]}] = x[1][0]
+	}
+
+	return counts, state, transformations
+}
+
+func Polymerize(transformations map[[2]byte]byte, counts map[byte]int, state map[[2]byte]int) (map[byte]int, map[[2]byte]int) {
+	new_counts, result := counts, make(map[[2]byte]int)
+	for pair, n := range state {
+		x := transformations[pair]
+		new_counts[x] += n
+		result[[2]byte{pair[0], x}] += n
+		result[[2]byte{x, pair[1]}] += n
+	}
+	return new_counts, result
+}
+
+func minmaxdiff(c map[byte]int) (result int) {
+	min := math.MaxInt
+	for _, n := range c {
+		if n < min {
+			min = n
+		}
+		if n > result {
+			result = n
+		}
+	}
+	result -= min
+	return
+}
+
+func day14a() int {
+	a, b, c := ParseDay14("data/day14.txt")
+
+	for i := 1; i <= 10; i++ {
+		a, b = Polymerize(c, a, b)
+	}
+	return minmaxdiff(a)
+}
+
+func day14b() int {
+	a, b, c := ParseDay14("data/day14.txt")
+
+	for i := 1; i <= 40; i++ {
+		a, b = Polymerize(c, a, b)
+	}
+	return minmaxdiff(a)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -857,4 +922,6 @@ func main() {
 	fmt.Println("day12b:", day12b())
 	fmt.Println("day13a:", day13a())
 	fmt.Println("day13b:", day13b())
+	fmt.Println("day14a:", day14a())
+	fmt.Println("day14b:", day14b())
 }
