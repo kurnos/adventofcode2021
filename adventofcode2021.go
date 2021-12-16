@@ -1005,6 +1005,176 @@ func day15b() int {
 	return ShortestPath(grid, Point{0, 0}, Point{len(grid) - 1, len(grid[0]) - 1})
 }
 
+func ParseDay16(fname string) (result []byte) {
+	for _, c := range readlines(fname)[0] {
+		var n byte
+		if c <= '9' {
+			n = byte(c - '0')
+		} else {
+			n = 10 + byte(c-'A')
+		}
+		result = append(append(append(append(result, (n>>3)&1), (n>>2)&1), (n>>1)&1), n&1)
+	}
+	return result
+}
+
+func ReadBit(bits []byte) (byte, []byte) {
+	return bits[0], bits[1:]
+}
+
+func ReadInt(bits []byte, n int) (int, []byte) {
+	result := 0
+	var b byte
+	for ; n > 0; n-- {
+		b, bits = ReadBit(bits)
+		result = result<<1 + int(b)
+	}
+	return result, bits
+}
+
+type Packet struct {
+	version       int
+	type_id       int
+	literal_value int
+	sub_packets   []Packet
+}
+
+func ReadPacket(bits []byte) (Packet, []byte) {
+	version, type_id, bits := ReadHeader(bits)
+	if type_id == 4 {
+		value, bits := ReadLiteralValue(bits)
+		return Packet{version, type_id, value, nil}, bits
+	} else {
+		sub_packets, bits := ReadSubPackets(bits)
+		return Packet{version, type_id, -1, sub_packets}, bits
+	}
+}
+
+func ReadHeader(bits []byte) (int, int, []byte) {
+	version, bits := ReadInt(bits, 3)
+	type_id, bits := ReadInt(bits, 3)
+	return version, type_id, bits
+}
+
+func ReadLiteralValue(bits []byte) (int, []byte) {
+	var marker byte
+	var d int
+	result := 0
+	for {
+		marker, bits = ReadBit(bits)
+		d, bits = ReadInt(bits, 4)
+		result = result<<4 + d
+		if marker == 0 {
+			break
+		}
+	}
+	return result, bits
+}
+
+func ReadSubPackets(bits []byte) ([]Packet, []byte) {
+	length_type, bits := ReadBit(bits)
+
+	var packet Packet
+	var packets []Packet
+
+	if length_type == 0 {
+		var bit_length int
+		bit_length, bits = ReadInt(bits, 15)
+		sub_bits, bits := bits[:bit_length], bits[bit_length:]
+		for len(sub_bits) > 0 {
+			packet, sub_bits = ReadPacket(sub_bits)
+			packets = append(packets, packet)
+		}
+		return packets, bits
+	} else {
+		msg_length, bits := ReadInt(bits, 11)
+		for i := 0; i < msg_length; i++ {
+			packet, bits = ReadPacket(bits)
+			packets = append(packets, packet)
+		}
+		return packets, bits
+	}
+}
+
+func day16a() int {
+	p, _ := ReadPacket(ParseDay16("data/day16.txt"))
+
+	var version_sum func(Packet) int
+	version_sum = func(p Packet) int {
+		result := p.version
+		for _, p := range p.sub_packets {
+			result += version_sum(p)
+		}
+		return result
+	}
+	return version_sum(p)
+}
+
+func day16b() int {
+	p, _ := ReadPacket(ParseDay16("data/day16.txt"))
+
+	var eval func(Packet) int
+	eval = func(p Packet) int {
+		switch p.type_id {
+		case 0:
+			result := 0
+			for _, p := range p.sub_packets {
+				result += eval(p)
+			}
+			return result
+		case 1:
+			result := 1
+			for _, p := range p.sub_packets {
+				result *= eval(p)
+			}
+			return result
+		case 2:
+			result := math.MaxInt
+			for _, p := range p.sub_packets {
+				if v := eval(p); v < result {
+					result = v
+				}
+			}
+			return result
+		case 3:
+			result := math.MinInt
+			for _, p := range p.sub_packets {
+				if v := eval(p); v > result {
+					result = v
+				}
+			}
+			return result
+		case 4:
+			return p.literal_value
+		case 5:
+			v1, v2 := eval(p.sub_packets[0]), eval(p.sub_packets[1])
+			if v1 > v2 {
+				return 1
+			} else {
+				return 0
+			}
+		case 6:
+			v1, v2 := eval(p.sub_packets[0]), eval(p.sub_packets[1])
+			if v1 < v2 {
+				return 1
+			} else {
+				return 0
+			}
+		case 7:
+			v1, v2 := eval(p.sub_packets[0]), eval(p.sub_packets[1])
+			if v1 == v2 {
+				return 1
+			} else {
+				return 0
+			}
+		default:
+			log.Fatal()
+			return -1
+		}
+	}
+	return eval(p)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1036,4 +1206,6 @@ func main() {
 	fmt.Println("day14b:", day14b())
 	fmt.Println("day15a:", day15a())
 	fmt.Println("day15b:", day15b())
+	fmt.Println("day16a:", day16a())
+	fmt.Println("day16b:", day16b())
 }
