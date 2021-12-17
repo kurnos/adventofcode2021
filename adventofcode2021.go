@@ -1175,6 +1175,85 @@ func day16b() int {
 	return eval(p)
 }
 
+func AtoI(s string) int {
+	i, e := strconv.Atoi(s)
+	if e != nil {
+		log.Fatal(e)
+	}
+	return i
+}
+
+func ParseDay17(fname string) (int, int, int, int) {
+	lines := readlines(fname)
+	s := lines[0][13:]
+	a := strings.SplitN(s, ", ", 2)
+	xs := strings.SplitN(a[0][2:], "..", 2)
+	ys := strings.SplitN(a[1][2:], "..", 2)
+	return AtoI(xs[0]), AtoI(xs[1]), AtoI(ys[0]), AtoI(ys[1])
+}
+
+func day17a() int {
+	// Assuming we can lob the projectile so it can fall vertically into the target...
+	_, _, ymin, ymax := ParseDay17("data/day17.txt")
+
+	best, max := 0, 0
+	for dy0 := 0; dy0 <= -ymin; dy0++ {
+		max += dy0
+		for dy, y := -dy0, 0; y > ymin; dy, y = dy-1, y+dy {
+			if y <= ymax && max > best {
+				best = max
+				break
+			}
+		}
+	}
+	return best
+}
+
+func day17b() int {
+	xmin, xmax, ymin, ymax := ParseDay17("data/day17.txt")
+
+	var dxts, dxToMinT [][2]int
+	for dx0 := xmax; dx0 > 0; dx0-- {
+		for x, dx, t := 0, dx0, 0; x <= xmax; x, dx, t = x+dx, dx-1, t+1 {
+			if dx == 0 {
+				if x >= xmin && x <= xmax {
+					dxToMinT = append(dxToMinT, [2]int{dx0, t})
+				}
+				break
+			}
+			if x >= xmin && x <= xmax {
+				dxts = append(dxts, [2]int{dx0, t})
+			}
+		}
+	}
+
+	var dyts [][2]int
+	for dy0 := ymin; dy0 < -ymin; dy0++ {
+		for y, dy, t := 0, dy0, 0; y >= ymin; y, dy, t = y+dy, dy-1, t+1 {
+			if y >= ymin && y <= ymax {
+				dyts = append(dyts, [2]int{dy0, t})
+			}
+		}
+	}
+
+	cartesian_product := make(map[[2]int]bool)
+	for _, dyt := range dyts {
+		dy, t0 := dyt[0], dyt[1]
+		for _, dxt := range dxts {
+			dx, t1 := dxt[0], dxt[1]
+			if t0 == t1 {
+				cartesian_product[[2]int{dx, dy}] = true
+			}
+		}
+		for _, dxMinT := range dxToMinT {
+			if t0 >= dxMinT[1] {
+				cartesian_product[[2]int{dxMinT[0], dy}] = true
+			}
+		}
+	}
+	return len(cartesian_product)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1208,4 +1287,6 @@ func main() {
 	fmt.Println("day15b:", day15b())
 	fmt.Println("day16a:", day16a())
 	fmt.Println("day16b:", day16b())
+	fmt.Println("day17a:", day17a())
+	fmt.Println("day17b:", day17b())
 }
