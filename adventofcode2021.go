@@ -1254,6 +1254,144 @@ func day17b() int {
 	return len(cartesian_product)
 }
 
+type Snail struct {
+	n, m       byte
+	prev, next *Snail
+}
+
+func NewSnail(n, m byte) *Snail {
+	return &Snail{n, m, nil, nil}
+}
+
+func ReadSnails(s string) (head *Snail) {
+	current, m := new(Snail), byte(1)
+	head = current
+	for _, c := range []byte(s) {
+		switch c {
+		case '[':
+			m *= 3
+		case ',':
+			m = 2 * (m / 3)
+		case ']':
+			m = m / 2
+		default:
+			current = current.insertAfter(NewSnail(byte(c-'0'), m))
+		}
+	}
+	head = head.next
+	head.prev.remove()
+	return head
+}
+
+func ParseDay18(fname string) (result []*Snail) {
+	for _, line := range readlines(fname) {
+		result = append(result, ReadSnails(line))
+	}
+	return
+}
+
+func (a *Snail) insertAfter(b *Snail) *Snail {
+	if a.next != nil {
+		a.next, b.prev, b.next, a.next.prev = b, a, a.next, b
+	} else {
+		a.next, b.prev, b.next = b, a, nil
+	}
+	return a.next
+}
+
+func (b *Snail) remove() {
+	if b.prev != nil {
+		b.prev.next = b.next
+	}
+	if b.next != nil {
+		b.next.prev = b.prev
+	}
+}
+
+func SnailMagnitude(snail *Snail) (result int) {
+	for ; snail != nil; snail = snail.next {
+		result += int(snail.n) * int(snail.m)
+	}
+	return
+}
+
+func SnailMagTooBig(m byte) bool {
+	// [2**(5-n)*3**n for n in range(6)]
+	return m == 32 || m == 48 || m == 72 || m == 108 || m == 162 || m == 243
+}
+
+func AddSnails(a, b *Snail) *Snail {
+	head := new(Snail)
+	current := head
+	for s := a; s != nil; s = s.next {
+		current = current.insertAfter(NewSnail(s.n, 3*s.m))
+	}
+	for s := b; s != nil; s = s.next {
+		current = current.insertAfter(NewSnail(s.n, 2*s.m))
+	}
+	head = head.next
+	head.prev.remove()
+	for {
+		var toSplit, toExplode *Snail
+		for snail := head; snail != nil; snail = snail.next {
+			if toSplit == nil && snail.n > 9 {
+				toSplit = snail
+			}
+			if toExplode == nil && SnailMagTooBig(snail.m) {
+				toExplode = snail
+				break
+			}
+		}
+
+		if toExplode != nil {
+			n1, n2 := toExplode.n, toExplode.next.n
+			toExplode.n, toExplode.m = 0, toExplode.m/3
+			toExplode.next.remove()
+			if toExplode.prev != nil {
+				toExplode.prev.n += n1
+			}
+			if toExplode.next != nil {
+				toExplode.next.n += n2
+			}
+		} else if toSplit != nil {
+			half := toSplit.n / 2
+			toSplit.insertAfter(&Snail{toSplit.n - half, 2 * toSplit.m, nil, nil})
+			toSplit.n, toSplit.m = half, 3*toSplit.m
+		} else {
+			break
+		}
+	}
+	return head
+}
+
+func day18a() int {
+	snails2 := ParseDay18("data/day18.txt")
+	a := snails2[0]
+	for _, b := range snails2[1:] {
+		a = AddSnails(a, b)
+	}
+	return SnailMagnitude(a)
+}
+
+func day18b() int {
+	snails := ParseDay18("data/day18.txt")
+
+	var results []int
+	for i, a := range snails {
+		for _, b := range snails[i+1:] {
+			results = append(results, SnailMagnitude(AddSnails(a, b)))
+			results = append(results, SnailMagnitude(AddSnails(b, a)))
+		}
+	}
+	max := 0
+	for _, m := range results {
+		if m > max {
+			max = m
+		}
+	}
+	return max
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1289,4 +1427,6 @@ func main() {
 	fmt.Println("day16b:", day16b())
 	fmt.Println("day17a:", day17a())
 	fmt.Println("day17b:", day17b())
+	fmt.Println("day18a:", day18a())
+	fmt.Println("day18b:", day18b())
 }
