@@ -1392,6 +1392,206 @@ func day18b() int {
 	return max
 }
 
+func ParseDay19(fname string) (scanners []Scan) {
+	var current Scan
+	var n int
+	for _, line := range readlines(fname) {
+		if len(line) == 0 {
+			current.fingerprint = fingerprint(current)
+			scanners = append(scanners, current)
+		} else if i, _ := fmt.Sscanf(line, "--- scanner %d ---", &n); i == 1 {
+			current = Scan{n, nil, nil}
+		} else {
+			fields := strings.SplitN(line, ",", 3)
+			current.points = append(current.points, Point3{AtoI(fields[0]), AtoI(fields[1]), AtoI(fields[2])})
+		}
+	}
+	current.fingerprint = fingerprint(current)
+	scanners = append(scanners, current)
+	return
+}
+
+type Rot = [3][3]int
+type Point3 = [3]int
+type Scan struct {
+	n           int
+	fingerprint []int
+	points      []Point3
+}
+type FixedScan struct {
+	n           int
+	center      Point3
+	fingerprint []int
+	points      map[Point3]bool
+}
+
+func NewFixedScan(s Scan, center Point3) FixedScan {
+	return FixedScan{s.n, center, s.fingerprint, make(map[[3]int]bool)}
+}
+
+func rotations() [24]Rot {
+	return [24]Rot{
+		{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+		{{0, -1, 0}, {1, 0, 0}, {0, 0, 1}},
+		{{-1, 0, 0}, {0, -1, 0}, {0, 0, 1}},
+		{{0, 1, 0}, {-1, 0, 0}, {0, 0, 1}},
+		{{0, 0, -1}, {0, 1, 0}, {1, 0, 0}},
+		{{0, 0, -1}, {1, 0, 0}, {0, -1, 0}},
+		{{0, 0, -1}, {0, -1, 0}, {-1, 0, 0}},
+		{{0, 0, -1}, {-1, 0, 0}, {0, 1, 0}},
+		{{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+		{{0, 1, 0}, {1, 0, 0}, {0, 0, -1}},
+		{{1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+		{{0, -1, 0}, {-1, 0, 0}, {0, 0, -1}},
+		{{0, 0, 1}, {0, 1, 0}, {-1, 0, 0}},
+		{{0, 0, 1}, {1, 0, 0}, {0, 1, 0}},
+		{{0, 0, 1}, {0, -1, 0}, {1, 0, 0}},
+		{{0, 0, 1}, {-1, 0, 0}, {0, -1, 0}},
+		{{0, -1, 0}, {0, 0, 1}, {-1, 0, 0}},
+		{{1, 0, 0}, {0, 0, 1}, {0, -1, 0}},
+		{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}},
+		{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}},
+		{{-1, 0, 0}, {0, 0, -1}, {0, -1, 0}},
+		{{0, 1, 0}, {0, 0, -1}, {-1, 0, 0}},
+		{{1, 0, 0}, {0, 0, -1}, {0, 1, 0}},
+		{{0, -1, 0}, {0, 0, -1}, {1, 0, 0}},
+	}
+}
+
+func rotate(p Point3, t Rot) Point3 {
+	return Point3{
+		p[0]*t[0][0] + p[1]*t[0][1] + p[2]*t[0][2],
+		p[0]*t[1][0] + p[1]*t[1][1] + p[2]*t[1][2],
+		p[0]*t[2][0] + p[1]*t[2][1] + p[2]*t[2][2],
+	}
+}
+
+func add(a, b Point3) Point3 {
+	return Point3{a[0] + b[0], a[1] + b[1], a[2] + b[2]}
+}
+
+func sub(a, b Point3) Point3 {
+	return Point3{a[0] - b[0], a[1] - b[1], a[2] - b[2]}
+}
+
+func transform_scan(scan Scan, rotation Rot, new_center Point3) FixedScan {
+	result := NewFixedScan(scan, new_center)
+	for _, p := range scan.points {
+		result.points[add(rotate(p, rotation), new_center)] = true
+	}
+	return result
+}
+
+func popat(slice []Scan, i int) ([]Scan, Scan) {
+	slice[i], slice[len(slice)-1] = slice[len(slice)-1], slice[i]
+	return slice[:len(slice)-1], slice[len(slice)-1]
+}
+
+func overlaps_with_transformation(s1 FixedScan, s2 Scan, r Rot, d Point3) bool {
+	count := 0
+	for _, p := range s2.points {
+		tp := add(d, rotate(p, r))
+		if s1.points[tp] {
+			count++
+			if count == 12 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func overlappingTransformation(s1 FixedScan, s2 Scan) (bool, Rot, Point3) {
+	matches := 0
+	for i, j := 0, 0; i < len(s1.fingerprint) && j < len(s2.fingerprint); {
+		if s1.fingerprint[i] == s2.fingerprint[j] {
+			i, j, matches = i+1, j+1, matches+1
+		} else if s1.fingerprint[i] < s2.fingerprint[j] {
+			i++
+		} else {
+			j++
+		}
+	}
+
+	if matches < 66 {
+		return false, Rot{}, Point3{}
+	}
+
+	rotations := rotations()
+	for _, r := range rotations {
+		for _, p2 := range s2.points {
+			tp2 := rotate(p2, r)
+			for p1 := range s1.points {
+				d := sub(p1, tp2)
+				if overlaps_with_transformation(s1, s2, r, d) {
+					return true, r, d
+				}
+			}
+		}
+	}
+	return false, Rot{}, Point3{}
+}
+
+func Max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func fingerprint(s Scan) (result []int) {
+	for i, p1 := range s.points {
+		for _, p2 := range s.points[i+1:] {
+			d := sub(p1, p2)
+			l1 := Abs(d[0]) + Abs(d[1]) + Abs(d[2])
+			linf := Max(Max(Abs(d[0]), Abs(d[1])), Abs(d[2]))
+			result = append(result, l1<<10|linf)
+		}
+	}
+	sort.Ints(result)
+	return
+}
+
+func day19() (int, int) {
+	remaining := ParseDay19("data/day19.txt")
+
+	remaining, s0 := popat(remaining, 0)
+	fixed := []FixedScan{transform_scan(s0, rotations()[0], Point3{})}
+
+	for len(remaining) > 0 {
+		for _, s1 := range fixed {
+			for i, s2 := range remaining {
+				if ok, r, d := overlappingTransformation(s1, s2); ok {
+					remaining, _ = popat(remaining, i)
+					fixed = append(fixed, transform_scan(s2, r, d))
+					break
+				}
+			}
+		}
+	}
+
+	union := make(map[Point3]bool)
+	for _, f := range fixed {
+		for p := range f.points {
+			union[p] = true
+		}
+	}
+
+	max := 0
+	for i, f1 := range fixed {
+		c1 := f1.center
+		for _, f2 := range fixed[i+1:] {
+			c2 := f2.center
+			d := Abs(c1[0]-c2[0]) + Abs(c1[1]-c2[1]) + Abs(c1[2]-c2[2])
+			if d > max {
+				max = d
+			}
+		}
+	}
+
+	return len(union), max
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1429,4 +1629,6 @@ func main() {
 	fmt.Println("day17b:", day17b())
 	fmt.Println("day18a:", day18a())
 	fmt.Println("day18b:", day18b())
+	a, b := day19()
+	fmt.Print("day19:", a, b)
 }
