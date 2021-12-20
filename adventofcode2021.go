@@ -1592,6 +1592,73 @@ func day19() (int, int) {
 	return len(union), max
 }
 
+func ParseDay20(fname string) (key [512]byte, image [][]byte) {
+	lines := readlines(fname)
+	for i, c := range []byte(lines[0]) {
+		key[i] = c & 1
+	}
+	for _, line := range lines[2:] {
+		var is []byte
+		for _, c := range []byte(line) {
+			is = append(is, c&1)
+		}
+		image = append(image, is)
+	}
+	return
+}
+
+func EnhanceImage(image [][]byte, outer byte, key [512]byte) ([][]byte, byte) {
+	size := len(image)
+	new_image := make([][]byte, size+2)
+	for y := 0; y < size+2; y++ {
+		new_image[y] = make([]byte, size+2)
+	}
+
+	for y0 := -1; y0 < size+1; y0++ {
+		for x0 := -1; x0 < size+1; x0++ {
+			t := 0
+			for y := y0 - 1; y <= y0+1; y++ {
+				for x := x0 - 1; x <= x0+1; x++ {
+					p := int(outer)
+					if y >= 0 && x >= 0 && y < size && x < size {
+						p = int(image[y][x])
+					}
+					t = t<<1 + p
+				}
+			}
+			new_image[y0+1][x0+1] = key[t]
+		}
+	}
+	outer = key[511*int(outer)]
+	return new_image, outer
+}
+
+func CountPixels(image [][]byte) (count int) {
+	for _, line := range image {
+		for _, p := range line {
+			count += int(p)
+		}
+	}
+	return
+}
+
+func day20a() int {
+	key, image := ParseDay20("data/day20.txt")
+	outer := byte(0)
+	image, outer = EnhanceImage(image, outer, key)
+	image, _ = EnhanceImage(image, outer, key)
+	return CountPixels(image)
+}
+
+func day20b() int {
+	key, image := ParseDay20("data/day20.txt")
+	outer := byte(0)
+	for i := 0; i < 50; i++ {
+		image, outer = EnhanceImage(image, outer, key)
+	}
+	return CountPixels(image)
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1631,4 +1698,6 @@ func main() {
 	fmt.Println("day18b:", day18b())
 	a, b := day19()
 	fmt.Print("day19:", a, b)
+	fmt.Println("day20a:", day20a())
+	fmt.Println("day20b:", day20b())
 }
