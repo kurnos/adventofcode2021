@@ -1659,6 +1659,68 @@ func day20b() int {
 	return CountPixels(image)
 }
 
+func ParseDay21(fname string) (result [2]byte) {
+	lines := readlines(fname)
+	for i := 0; i < 2; i++ {
+		result[i] = byte(AtoI(strings.SplitN(lines[i], ": ", 2)[1]) - 1)
+	}
+	return
+}
+
+func Min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func day21a() int {
+	pos := ParseDay21("data/day21.txt")
+	scores := [2]int{}
+	die, rolls := byte(100), 0
+	roll := func() byte {
+		die, rolls = (die%100)+1, rolls+1
+		return die % 10
+	}
+	for i := 0; scores[0] < 1000 && scores[1] < 1000; i = 1 - i {
+		pos[i] = (pos[i] + roll() + roll() + roll()) % 10
+		scores[i] += int(pos[i]) + 1
+	}
+	return Min(scores[0], scores[1]) * rolls
+}
+
+type Asdf struct {
+	ps [2]byte
+	ss [2]int
+}
+
+func day21b() int {
+	pos := ParseDay21("data/day21.txt")
+	states := map[Asdf]int{{pos, [2]int{}}: 1}
+	wins := [2]int{}
+	rolls := [7]int{1, 3, 6, 7, 6, 3, 1}
+
+	for i := 0; len(states) > 0; i = 1 - i {
+		new := make(map[Asdf]int)
+		for s, count := range states {
+			for r, m := range rolls {
+				next_s := s
+				next_s.ps[i] = (next_s.ps[i] + byte(r) + 3) % 10
+				next_s.ss[i] += int(next_s.ps[i] + 1)
+				if next_s.ss[i] >= 21 {
+					wins[i] += count * m
+				} else {
+					new[next_s] += count * m
+				}
+			}
+		}
+		states = new
+	}
+
+	return Max(wins[0], wins[1])
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1700,4 +1762,6 @@ func main() {
 	fmt.Print("day19:", a, b)
 	fmt.Println("day20a:", day20a())
 	fmt.Println("day20b:", day20b())
+	fmt.Println("day21a:", day21a())
+	fmt.Println("day21b:", day21b())
 }
