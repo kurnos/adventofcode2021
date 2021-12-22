@@ -1721,6 +1721,159 @@ func day21b() int {
 	return Max(wins[0], wins[1])
 }
 
+type Cuboid struct {
+	x0, x1, y0, y1, z0, z1 int
+}
+
+type RebootStep struct {
+	on   bool
+	prio int
+	c    Cuboid
+}
+
+func ParseDay22(fname string) (result []RebootStep) {
+	var x0, x1, y0, y1, z0, z1 int
+	var cmd string
+	for i, line := range readlines(fname) {
+		fmt.Sscanf(line, "%s x=%d..%d,y=%d..%d,z=%d..%d", &cmd, &x0, &x1, &y0, &y1, &z0, &z1)
+		result = append(result, RebootStep{cmd == "on", i, Cuboid{x0, x1 + 1, y0, y1 + 1, z0, z1 + 1}})
+	}
+	return result
+}
+
+func day22a() int {
+	steps := ParseDay22("data/day22.txt")
+	cubes := make(map[[3]int]bool)
+	for _, step := range steps {
+		for x := Max(step.c.x0, -50); x < Min(step.c.x1, 51); x++ {
+			for y := Max(step.c.y0, -50); y < Min(step.c.y1, 51); y++ {
+				for z := Max(step.c.z0, -50); z < Min(step.c.z1, 51); z++ {
+					if step.on {
+						cubes[[3]int{x, y, z}] = step.on
+					} else {
+						delete(cubes, [3]int{x, y, z})
+					}
+
+				}
+			}
+		}
+	}
+	return len(cubes)
+}
+
+type Endpoint struct {
+	start bool
+	pos   int
+	step  *RebootStep
+}
+
+type StepPointSlice []Endpoint
+
+func (s StepPointSlice) Len() int           { return len(s) }
+func (s StepPointSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s StepPointSlice) Less(i, j int) bool { return s[i].pos < s[j].pos }
+
+func Sweepline(steps []RebootStep) int {
+	points := make([]Endpoint, 0, len(steps)*2)
+	for _, s := range steps {
+		s := s
+		points = append(points, Endpoint{true, s.c.z0, &s})
+		points = append(points, Endpoint{false, s.c.z1, &s})
+	}
+	sort.Sort(StepPointSlice(points))
+
+	result := 0
+	working_set := make(map[*RebootStep]bool)
+	first, prev := true, 0
+	for i := 0; i < len(points); {
+		this := points[i].pos
+		var to_remove, to_add []*RebootStep
+		for ; i < len(points) && points[i].pos == this; i++ {
+			p := points[i]
+			if p.start {
+				to_add = append(to_add, p.step)
+			} else {
+				to_remove = append(to_remove, p.step)
+			}
+		}
+		if !first {
+			prio, verdict := -1, false
+			for s := range working_set {
+				if s.prio > prio {
+					prio = s.prio
+					verdict = s.on
+				}
+			}
+			if verdict {
+				result += this - prev
+			}
+		}
+
+		for _, remove := range to_remove {
+			delete(working_set, remove)
+		}
+		for _, add := range to_add {
+			working_set[add] = true
+		}
+		prev, first = this, false
+	}
+	return result
+}
+
+func distinct(xs []int) []int {
+	result := []int{xs[0]}
+	for i := 1; i < len(xs); i++ {
+		if xs[i] != xs[i-1] {
+			result = append(result, xs[i])
+		}
+	}
+	return result
+}
+
+func day22b() int {
+	steps := ParseDay22("data/day22.txt")
+
+	result := 0
+
+	var xs []int
+	for _, s := range steps {
+		xs = append(xs, s.c.x0)
+		xs = append(xs, s.c.x1)
+	}
+	sort.Ints(xs)
+	xs = distinct(xs)
+
+	for i := 0; i < len(xs)-1; i++ {
+		x0, x1 := xs[i], xs[i+1]
+		matching_xs := []RebootStep{}
+		for _, s := range steps {
+			if s.c.x0 < x1 && x0 < s.c.x1 {
+				matching_xs = append(matching_xs, s)
+			}
+		}
+		var ys []int
+		for _, s := range matching_xs {
+			ys = append(ys, s.c.y0)
+			ys = append(ys, s.c.y1)
+		}
+		sort.Ints(ys)
+		ys = distinct(ys)
+
+		for i := 0; i < len(ys)-1; i++ {
+			y0, y1 := ys[i], ys[i+1]
+			matching_ys := []RebootStep{}
+			for _, s := range matching_xs {
+				if s.c.y0 < y1 && y0 < s.c.y1 {
+					matching_ys = append(matching_ys, s)
+				}
+			}
+			result += Sweepline(matching_ys) * (y1 - y0) * (x1 - x0)
+		}
+	}
+
+	return result
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1764,4 +1917,6 @@ func main() {
 	fmt.Println("day20b:", day20b())
 	fmt.Println("day21a:", day21a())
 	fmt.Println("day21b:", day21b())
+	fmt.Println("day22a:", day22a())
+	fmt.Println("day22b:", day22b())
 }
