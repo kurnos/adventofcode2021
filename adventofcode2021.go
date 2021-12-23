@@ -1874,6 +1874,222 @@ func day22b() int {
 	return result
 }
 
+type State struct {
+	rooms    [4][4]int8
+	corridor [7]int8
+}
+
+type Vertex2 struct {
+	state       State
+	cost, index int
+}
+
+type PriorityQueue2 []*Vertex2
+
+func (pq PriorityQueue2) Len() int           { return len(pq) }
+func (pq PriorityQueue2) Less(i, j int) bool { return pq[i].cost < pq[j].cost }
+func (pq PriorityQueue2) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+func (pq *PriorityQueue2) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	item.index = -1
+	*pq = old[0 : n-1]
+	return item
+}
+func (pq *PriorityQueue2) Push(x interface{}) {
+	n := len(*pq)
+	item := x.(*Vertex2)
+	item.index = n
+	*pq = append(*pq, item)
+}
+func (pq *PriorityQueue2) Update(vertex *Vertex2, cost int) {
+	vertex.cost = cost
+	heap.Fix(pq, vertex.index)
+}
+
+func ParseDay23(fname string) State {
+	lines := readlines(fname)
+	rooms := [4][4]int8{}
+	for i := 0; i < 4; i++ {
+		rooms[i][0] = int8(lines[2][3+i*2] - 'A' + 1)
+		rooms[i][1] = int8(lines[3][3+i*2] - 'A' + 1)
+		rooms[i][2] = int8(i + 1)
+		rooms[i][3] = int8(i + 1)
+	}
+	return State{rooms, [7]int8{}}
+}
+
+func IntPow(base, exp int) int {
+	result := 1
+	for ; exp > 0; exp-- {
+		result *= base
+	}
+	return result
+}
+
+func next(s State) map[State]int {
+	room_to_corridor := []struct {
+		room, corridor, dist int
+		blocked_by           []int
+	}{
+		{0, 0, 3, []int{1}},
+		{0, 1, 2, []int{}},
+		{0, 2, 2, []int{}},
+		{0, 3, 4, []int{2}},
+		{0, 4, 6, []int{2, 3}},
+		{0, 5, 8, []int{2, 3, 4}},
+		{0, 6, 9, []int{2, 3, 4, 5}},
+
+		{1, 0, 5, []int{1, 2}},
+		{1, 1, 4, []int{2}},
+		{1, 2, 2, []int{}},
+		{1, 3, 2, []int{}},
+		{1, 4, 4, []int{3}},
+		{1, 5, 6, []int{3, 4}},
+		{1, 6, 7, []int{3, 4, 5}},
+
+		{2, 0, 7, []int{1, 2, 3}},
+		{2, 1, 6, []int{2, 3}},
+		{2, 2, 4, []int{3}},
+		{2, 3, 2, []int{}},
+		{2, 4, 2, []int{}},
+		{2, 5, 4, []int{4}},
+		{2, 6, 5, []int{4, 5}},
+
+		{3, 0, 9, []int{1, 2, 3, 4}},
+		{3, 1, 8, []int{2, 3, 4}},
+		{3, 2, 6, []int{3, 4}},
+		{3, 3, 4, []int{4}},
+		{3, 4, 2, []int{}},
+		{3, 5, 2, []int{}},
+		{3, 6, 3, []int{5}},
+	}
+
+	result := make(map[State]int)
+
+	for _, rtc := range room_to_corridor {
+		blocked := false
+		for _, c := range rtc.blocked_by {
+			if s.corridor[c] != 0 {
+				blocked = true
+				break
+			}
+		}
+		if blocked {
+			continue
+		}
+
+		if s.corridor[rtc.corridor] == 0 { // move out
+			if s.rooms[rtc.room][0] > 0 { // from 0
+				i, new_s := 0, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = 0, new_s.rooms[rtc.room][i]
+				result[new_s] = (rtc.dist + i) * IntPow(10, int(s.rooms[rtc.room][i])-1)
+			} else if s.rooms[rtc.room][0] == 0 && s.rooms[rtc.room][1] > 0 { // from 1
+				i, new_s := 1, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = 0, new_s.rooms[rtc.room][i]
+				result[new_s] = (rtc.dist + i) * IntPow(10, int(s.rooms[rtc.room][i])-1)
+			} else if s.rooms[rtc.room][0] == 0 && s.rooms[rtc.room][1] == 0 && s.rooms[rtc.room][2] > 0 { // from 2
+				i, new_s := 2, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = 0, new_s.rooms[rtc.room][i]
+				result[new_s] = (rtc.dist + i) * IntPow(10, int(s.rooms[rtc.room][i])-1)
+			} else if s.rooms[rtc.room][0] == 0 && s.rooms[rtc.room][1] == 0 && s.rooms[rtc.room][2] == 0 && s.rooms[rtc.room][3] > 0 { // from 3
+				i, new_s := 3, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = 0, new_s.rooms[rtc.room][i]
+				result[new_s] = (rtc.dist + i) * IntPow(10, int(s.rooms[rtc.room][i])-1)
+			}
+		} else if s.corridor[rtc.corridor] == int8(rtc.room)+1 { // move in
+			if s.rooms[rtc.room][0] == 0 && s.rooms[rtc.room][1] == 0 && s.rooms[rtc.room][2] == 0 && s.rooms[rtc.room][3] == 0 { // to 3
+				i, new_s := 3, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = -new_s.corridor[rtc.corridor], 0
+				result[new_s] = (i + rtc.dist) * IntPow(10, int(s.corridor[rtc.corridor])-1)
+			} else if s.rooms[rtc.room][0] == 0 && s.rooms[rtc.room][1] == 0 && s.rooms[rtc.room][2] == 0 { // to 2
+				i, new_s := 2, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = -new_s.corridor[rtc.corridor], 0
+				result[new_s] = (i + rtc.dist) * IntPow(10, int(s.corridor[rtc.corridor])-1)
+			} else if s.rooms[rtc.room][0] == 0 && s.rooms[rtc.room][1] == 0 { // to 1
+				i, new_s := 1, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = -new_s.corridor[rtc.corridor], 0
+				result[new_s] = (i + rtc.dist) * IntPow(10, int(s.corridor[rtc.corridor])-1)
+			} else if s.rooms[rtc.room][1] < 0 && s.rooms[rtc.room][0] == 0 { // to 0
+				i, new_s := 0, s
+				new_s.rooms[rtc.room][i], new_s.corridor[rtc.corridor] = -new_s.corridor[rtc.corridor], 0
+				result[new_s] = (i + rtc.dist) * IntPow(10, int(s.corridor[rtc.corridor])-1)
+			}
+		}
+	}
+
+	return result
+}
+
+func unfold(s State) State {
+	s.rooms[0] = [4]int8{s.rooms[0][0], 4, 4, s.rooms[0][1]}
+	s.rooms[1] = [4]int8{s.rooms[1][0], 3, 2, s.rooms[1][1]}
+	s.rooms[2] = [4]int8{s.rooms[2][0], 2, 1, s.rooms[2][1]}
+	s.rooms[3] = [4]int8{s.rooms[3][0], 1, 3, s.rooms[3][1]}
+	return s
+}
+
+func LowestEnergy(s State) int {
+	for i := 0; i < 4; i++ {
+		for j := 3; j >= 0; j-- {
+			if s.rooms[i][j] != int8(i+1) {
+				break
+			}
+			s.rooms[i][j] = -s.rooms[i][j]
+		}
+	}
+	state_to_vertex := make(map[State]*Vertex2)
+	prev := make(map[State]State)
+
+	queue := PriorityQueue2{}
+	vx := &Vertex2{s, 0, 0}
+	state_to_vertex[s] = vx
+	queue.Push(vx)
+	heap.Init(&queue)
+
+	done := State{
+		rooms:    [4][4]int8{{-1, -1, -1, -1}, {-2, -2, -2, -2}, {-3, -3, -3, -3}, {-4, -4, -4, -4}},
+		corridor: [7]int8{},
+	}
+
+	for len(queue) > 0 {
+		u := heap.Pop(&queue).(*Vertex2)
+
+		if u.state == done {
+			return u.cost
+		}
+
+		for v, lenvth_uv := range next(u.state) {
+			target_vertex, found := state_to_vertex[v]
+			cost := u.cost + lenvth_uv
+			if !found {
+				prev[v] = u.state
+				vx := &Vertex2{v, cost, -1}
+				heap.Push(&queue, vx)
+				state_to_vertex[v] = vx
+			} else if cost < target_vertex.cost {
+				prev[v] = u.state
+				queue.Update(state_to_vertex[v], cost)
+			}
+		}
+	}
+	return 0
+}
+
+func day23a() int {
+	return LowestEnergy(ParseDay23("data/day23.txt"))
+}
+
+func day23b() int {
+	return LowestEnergy(unfold(ParseDay23("data/day23.txt")))
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -1919,4 +2135,6 @@ func main() {
 	fmt.Println("day21b:", day21b())
 	fmt.Println("day22a:", day22a())
 	fmt.Println("day22b:", day22b())
+	fmt.Println("day23a:", day23a())
+	fmt.Println("day23b:", day23b())
 }
