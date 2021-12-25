@@ -2090,6 +2090,162 @@ func day23b() int {
 	return LowestEnergy(unfold(ParseDay23("data/day23.txt")))
 }
 
+type Cmd struct {
+	cmd        string
+	var1, var2 int
+	p2         int
+}
+
+func ParseDay24(fname string) (result []Cmd) {
+	for _, s := range readlines(fname) {
+		ss := strings.Fields(s)
+		c := Cmd{ss[0], int(ss[1][0] - 'w'), -1, 0}
+		if len(ss) == 3 {
+			p, err := strconv.Atoi(ss[2])
+			if err == nil {
+				c.p2 = p
+			} else {
+				c.var2 = int(ss[2][0] - 'w')
+			}
+		}
+		result = append(result, c)
+	}
+	return
+}
+
+func MonadConstraints(cmds []Cmd) (result [][3]int) {
+	s, stack := [2]int{}, [][2]int{}
+	for i := 0; i < len(cmds)/18; i++ {
+		a, b, c := cmds[18*i+4], cmds[18*i+5], cmds[18*i+15]
+		if a.p2 == 1 {
+			stack = append(stack, [2]int{i, c.p2})
+		} else {
+			s, stack = stack[len(stack)-1], stack[:len(stack)-1]
+			result = append(result, [3]int{s[0], i, -b.p2 - s[1]})
+		}
+	}
+	return
+}
+
+func day24a() int {
+	cmds := ParseDay24("data/day24.txt")
+
+	n := 0
+	for _, c := range MonadConstraints(cmds) {
+		i1, i2, diff := c[0], c[1], c[2]
+		for a := 9; a >= 1; a-- {
+			if b := a - diff; b >= 1 && b <= 9 {
+				n += IntPow(10, 13-i1)*a + IntPow(10, 13-i2)*b
+				break
+			}
+		}
+	}
+	return n
+}
+
+func day24b() int {
+	cmds := ParseDay24("data/day24.txt")
+
+	n := 0
+	for _, c := range MonadConstraints(cmds) {
+		i1, i2, diff := c[0], c[1], c[2]
+		for a := 1; a <= 9; a++ {
+			if b := a - diff; b >= 1 && b <= 9 {
+				n += IntPow(10, 13-i1)*a + IntPow(10, 13-i2)*b
+				break
+			}
+		}
+	}
+	return n
+}
+
+func ParseDay25(fname string) (map[Point]byte, int, int) {
+	result := make(map[Point]byte)
+	var size_x, size_y int
+	for y, line := range readlines(fname) {
+		for x, c := range []byte(line) {
+			if c != '.' {
+				result[Point{x, y}] = c
+			}
+			size_x = x
+		}
+		size_y = y
+	}
+	return result, size_x + 1, size_y + 1
+}
+
+func ShowCucumbers(cucumbers map[Point]byte, size_x, size_y int) {
+	for y := 0; y < size_y; y++ {
+		for x := 0; x < size_x; x++ {
+			if x := cucumbers[Point{x, y}]; x != 0 {
+				fmt.Print(string(x))
+			} else {
+				fmt.Print(string('.'))
+			}
+		}
+		fmt.Println()
+	}
+}
+
+func day25a() int {
+	cucumbers, size_x, size_y := ParseDay25("data/day25.txt")
+
+	north := func(p Point) Point { return Point{p.x, (p.y - 1 + size_y) % size_y} }
+	south := func(p Point) Point { return Point{p.x, (p.y + 1) % size_y} }
+	west := func(p Point) Point { return Point{(p.x - 1 + size_x) % size_x, p.y} }
+	east := func(p Point) Point { return Point{(p.x + 1) % size_x, p.y} }
+
+	var move_s, move_e []Point
+	for p, x := range cucumbers {
+		if x == '>' && cucumbers[east(p)] == 0 {
+			move_e = append(move_e, p)
+		} else if x == 'v' && cucumbers[south(p)] == 0 {
+			move_s = append(move_s, p)
+		}
+	}
+
+	i := 1
+	for ; len(move_s) > 0 || len(move_e) > 0; i++ {
+		var new_move_e []Point
+		for _, p := range move_e {
+			if cucumbers[east(p)] == 0 {
+				cucumbers[east(p)] = '>'
+				delete(cucumbers, p)
+				if cucumbers[north(p)] == 'v' {
+					move_s = append(move_s, north(p))
+				}
+				if cucumbers[west(p)] == '>' {
+					new_move_e = append(new_move_e, west(p))
+				}
+				if cucumbers[east(east(p))] == 0 {
+					new_move_e = append(new_move_e, east(p))
+				}
+			}
+		}
+		move_e = new_move_e
+
+		var new_move_s []Point
+		for _, p := range move_s {
+			if cucumbers[south(p)] == 0 {
+				cucumbers[south(p)] = 'v'
+				delete(cucumbers, p)
+				if cucumbers[west(p)] == '>' {
+					move_e = append(move_e, west(p))
+				}
+				if cucumbers[north(p)] == 'v' {
+					new_move_s = append(new_move_s, north(p))
+				}
+				if cucumbers[south(south(p))] == 0 {
+					new_move_s = append(new_move_s, south(p))
+				}
+			}
+		}
+		move_s = new_move_s
+	}
+
+	return i
+}
+
 func main() {
 	fmt.Println("day01a:", day01a())
 	fmt.Println("day01b:", day01b())
@@ -2137,4 +2293,7 @@ func main() {
 	fmt.Println("day22b:", day22b())
 	fmt.Println("day23a:", day23a())
 	fmt.Println("day23b:", day23b())
+	fmt.Println("day24a:", day24a())
+	fmt.Println("day24b:", day24b())
+	fmt.Println("day25a:", day25a())
 }
